@@ -36,6 +36,7 @@ public class RootViewModel : Screen
 
     public async void OnViewFullyLoaded()
     {
+
     }
 
     protected override void OnViewLoaded()
