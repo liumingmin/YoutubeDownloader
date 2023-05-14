@@ -142,6 +142,59 @@ public class DashboardViewModel : PropertyChangedBase, IDisposable
 
     public bool CanProcessQuery => !IsBusy && !string.IsNullOrWhiteSpace(Query);
 
+    public async void ProcessDownloadsLocalFile()
+    {
+
+    }
+
+    public async void ProcessDownloadLocalFile(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return;
+
+        IsBusy = true;
+
+        // Small weight to not offset any existing download operations
+        var progress = _progressMuxer.CreateInput(0.01);
+
+        try
+        {
+            var result = await _queryResolver.ResolveAsync(
+                new string[]{ url},
+                progress
+            );
+
+            // Single video
+            if (result.Videos.Count == 1)
+            {
+                var video = result.Videos.Single();
+                var downloadOptions = await _videoDownloader.GetDownloadOptionsAsync(video.Id);
+
+                //直接下载
+                var download = _viewModelFactory.CreateDownloadSingleSetupViewModel(video, downloadOptions).DialogResult;
+                
+                if (download is null)
+                    return;
+
+                download.FilePath = "./downloads";
+
+
+                EnqueueDownload(download);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex is YoutubeExplodeException
+                        ? ex.Message
+                        : ex.ToString());
+        }
+        finally
+        {
+            progress.ReportCompletion();
+            IsBusy = false;
+        }
+    }
+
     public async void ProcessQuery()
     {
         if (string.IsNullOrWhiteSpace(Query))
